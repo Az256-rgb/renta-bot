@@ -1,0 +1,46 @@
+name: jinka-bot
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # toutes les 30 minutes UTC
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: jinka-bot
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run bot
+        run: python bot.py
+        env:
+          JINKA_MAIL:           ${{ secrets.JINKA_MAIL }}
+          JINKA_PASS:           ${{ secrets.JINKA_PASS }}
+          SMTP_HOST:            ${{ secrets.SMTP_HOST }}
+          SMTP_USER:            ${{ secrets.SMTP_USER }}
+          SMTP_PASS:            ${{ secrets.SMTP_PASS }}
+          SMTP_FROM:            ${{ secrets.SMTP_FROM }}
+          SMTP_TO:              ${{ secrets.SMTP_TO }}
+          NOTION_TOKEN:         ${{ secrets.NOTION_TOKEN }}        # facultatif
+          NOTION_DATABASE_ID:   ${{ secrets.NOTION_DATABASE_ID }}  # facultatif
+
+      - name: Commit seen IDs
+        run: |
+          git config --global user.email "github-bot@users.noreply.github.com"
+          git config --global user.name  "github-bot"
+          git add data/seen_ids.json
+          git commit -m "update seen IDs" || echo "no changes"
+          git push
